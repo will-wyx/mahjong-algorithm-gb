@@ -46,7 +46,7 @@ export {
 /**
  * 解析手牌字符串。
  * @param {string} text - 手牌字符串
- * @returns {Object} 包含 ok 和 hand 对象
+ * @returns {Object} 包含 ok (boolean) 和解析结果 (hand 等)
  */
 export const parseHand = (text) => {
   const result = parseHandDetailed(text);
@@ -56,7 +56,7 @@ export const parseHand = (text) => {
 /**
  * 将手牌字符串规范化。
  * @param {string} text - 手牌字符串
- * @returns {Object} 包含 ok 和规范化后的 hand 字符串
+ * @returns {Object} 包含 ok (boolean) 和规范化后的 hand 字符串
  */
 export const stringifyHand = (text) => {
   const result = parseHandDetailed(text);
@@ -66,7 +66,7 @@ export const stringifyHand = (text) => {
 /**
  * 计算各种和牌方式下的向听数及有效进张。
  * @param {string} text - 手牌字符串
- * @returns {Object} 包含向听数及有效牌数组
+ * @returns {Object} 包含 ok (boolean) 以及各种和牌方式的向听数和有效牌
  */
 export const calculateShanten = (text) => {
   const result = parseHandDetailed(text);
@@ -87,7 +87,7 @@ export const calculateShanten = (text) => {
  * 计算番数的主入口。
  * @param {string} text - 手牌字符串
  * @param {Object} options - 计算参数（如 selfDrawn, prevalentWind, seatWind）
- * @returns {Object} 算番结果
+ * @returns {Object} 算番结果对象，包含 ok, totalFan, fanTable
  */
 export const calculateFan = (text, options = {}) => {
   const result = parseHandDetailed(text);

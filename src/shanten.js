@@ -28,7 +28,7 @@ export function getTileCounts(tiles) {
  * 递归获取手牌的所有可能面子分解（顺子、刻子）。
  * @param {number[]} counts - 计数数组（会被修改，需注意还原）
  * @param {number} start - 开始扫描的索引
- * @returns {Array[]} 所有可能的分解方案数组
+ * @returns {Array[]} 所有可能的分解方案数组，每个方案是一个包含面子对象的数组
  */
 function getDecompositions(counts, start = 0) {
   let index = start;
@@ -164,7 +164,11 @@ export function getThirteenOrphansShanten(tiles) {
   return 13 - uniqueOrphanCount - hasPair;
 }
 
-/** 内部辅助函数：将索引转换为牌字符串 */
+/**
+ * 内部辅助函数：将索引转换为牌字符串。
+ * @param {number} index - 牌的索引 (0-33)
+ * @returns {string} 牌字符串 (如 '1m', 'E')
+ */
 function tileFromIndex(index) {
   if (index < 9) return `${index + 1}m`;
   if (index < 18) return `${index - 8}s`;

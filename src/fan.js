@@ -113,28 +113,82 @@ export const FAN_VALUE = {
   CONCEALED_KONG_AND_MELDED_KONG: 5 // 暗杠和明杠
 };
 
-/** 内部辅助函数：获取花色 */
+/**
+ * 内部辅助函数：获取花色。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {number} 花色值 (0:万, 1:条, 2:筒, 4:字)
+ */
 function getTileSuit(tile) { return (tile >> 4) & 0xF; }
-/** 内部辅助函数：获取序数 */
+
+/**
+ * 内部辅助函数：获取序数。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {number} 序数值 (1-9)
+ */
 function getTileRank(tile) { return tile & 0xF; }
-/** 内部辅助函数：构造牌 */
+
+/**
+ * 内部辅助函数：构造牌。
+ * @param {number} suit - 花色
+ * @param {number} rank - 序数
+ * @returns {number} 牌的十六进制编码
+ */
 function makeTile(suit, rank) { return (suit << 4) | rank; }
 
-/** 是否为序数牌（万筒条） */
+/**
+ * 是否为序数牌（万筒条）。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {boolean}
+ */
 function isNumberedSuit(tile) { return !(tile & 0xC0); }
-/** 是否为幺九牌（1或9） */
+
+/**
+ * 是否为幺九牌（1或9）。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {boolean}
+ */
 function isTerminal(tile) { return (tile & 0xC7) === 1; }
-/** 是否为字牌 */
+
+/**
+ * 是否为字牌。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {boolean}
+ */
 function isHonor(tile) { return tile > 0x40 && tile < 0x48; }
-/** 是否为幺九牌或字牌 */
+
+/**
+ * 是否为幺九牌或字牌。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {boolean}
+ */
 function isTerminalOrHonor(tile) { return isTerminal(tile) || isHonor(tile); }
-/** 是否为风牌（东南西北） */
+
+/**
+ * 是否为风牌（东南西北）。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {boolean}
+ */
 function isWind(tile) { return tile > 0x40 && tile < 0x45; }
-/** 是否为箭牌（中发白） */
+
+/**
+ * 是否为箭牌（中发白）。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {boolean}
+ */
 function isDragon(tile) { return tile > 0x44 && tile < 0x48; }
-/** 是否为绿一色相关的牌 */
+
+/**
+ * 是否为绿一色相关的牌。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {boolean}
+ */
 function isGreen(tile) { return [0x22, 0x23, 0x24, 0x26, 0x28, 0x46].includes(tile); }
-/** 是否为推不倒相关的牌 */
+
+/**
+ * 是否为推不倒相关的牌。
+ * @param {number} tile - 牌的十六进制编码
+ * @returns {boolean}
+ */
 function isReversible(tile) { return [0x22, 0x24, 0x25, 0x26, 0x28, 0x29, 0x31, 0x32, 0x33, 0x34, 0x35, 0x38, 0x39, 0x47].includes(tile); }
 
 /** 内部映射表：牌名字到十六进制编码 */
@@ -145,7 +199,11 @@ const TILE_MAP = {
   'E': 0x41, 'S': 0x42, 'W': 0x43, 'N': 0x44, 'C': 0x45, 'F': 0x46, 'P': 0x47
 };
 
-/** 转换牌字符串为十六进制 */
+/**
+ * 转换牌字符串为十六进制。
+ * @param {string} tile - 牌字符串 (如 '1m')
+ * @returns {number} 十六进制编码
+ */
 function toHexTile(tile) { return TILE_MAP[tile]; }
 
 /** 标准十三幺牌型 */
@@ -160,18 +218,73 @@ const STANDARD_KNITTED_STRAIGHT = [
   [0x13, 0x16, 0x19, 0x22, 0x25, 0x28, 0x31, 0x34, 0x37]
 ];
 
-// 辅助检测函数：检查顺子/刻子的排布关系
+/**
+ * 辅助检测函数：检查四组连续序数。
+ * @param {number} r0 - 序数0
+ * @param {number} r1 - 序数1
+ * @param {number} r2 - 序数2
+ * @param {number} r3 - 序数3
+ * @returns {boolean}
+ */
 function isFourShifted1(r0, r1, r2, r3) { return r0 + 1 === r1 && r1 + 1 === r2 && r2 + 1 === r3; }
+
+/**
+ * 辅助检测函数：检查四组等差序数（步长为2）。
+ * @param {number} r0 - 序数0
+ * @param {number} r1 - 序数1
+ * @param {number} r2 - 序数2
+ * @param {number} r3 - 序数3
+ * @returns {boolean}
+ */
 function isFourShifted2(r0, r1, r2, r3) { return r0 + 2 === r1 && r1 + 2 === r2 && r2 + 2 === r3; }
+
+/**
+ * 辅助检测函数：检查三组连续序数。
+ * @param {number} r0 - 序数0
+ * @param {number} r1 - 序数1
+ * @param {number} r2 - 序数2
+ * @returns {boolean}
+ */
 function isShifted1(r0, r1, r2) { return r0 + 1 === r1 && r1 + 1 === r2; }
+
+/**
+ * 辅助检测函数：检查三组等差序数（步长为2）。
+ * @param {number} r0 - 序数0
+ * @param {number} r1 - 序数1
+ * @param {number} r2 - 序数2
+ * @returns {boolean}
+ */
 function isShifted2(r0, r1, r2) { return r0 + 2 === r1 && r1 + 2 === r2; }
+
+/**
+ * 辅助检测函数：检查三组无序连续序数。
+ * @param {number} r0 - 序数0
+ * @param {number} r1 - 序数1
+ * @param {number} r2 - 序数2
+ * @returns {boolean}
+ */
 function isShifted1Unordered(r0, r1, r2) {
   const [a, b, c] = [r0, r1, r2].sort((x, y) => x - y);
   return a + 1 === b && b + 1 === c;
 }
+
+/**
+ * 辅助检测函数：检查三组花色是否互不相同。
+ * @param {number} s0 - 花色0
+ * @param {number} s1 - 花色1
+ * @param {number} s2 - 花色2
+ * @returns {boolean}
+ */
 function isMixed(s0, s1, s2) { return s0 !== s1 && s0 !== s2 && s1 !== s2; }
 
-/** 识别 4 组顺子构成的番种（一色四节高、一色四同顺等） */
+/**
+ * 识别 4 组顺子构成的番种（一色四节高、一色四同顺等）。
+ * @param {number} t0 - 顺子0的代表牌
+ * @param {number} t1 - 顺子1的代表牌
+ * @param {number} t2 - 顺子2的代表牌
+ * @param {number} t3 - 顺子3的代表牌
+ * @returns {string|null} 番种名称
+ */
 function get4ChowsFan(t0, t1, t2, t3) {
   const ranks = [t0, t1, t2, t3].map(getTileRank).sort((a, b) => a - b);
   if (isFourShifted2(ranks[0], ranks[1], ranks[2], ranks[3])) return 'FOUR_PURE_SHIFTED_CHOWS';
@@ -180,7 +293,13 @@ function get4ChowsFan(t0, t1, t2, t3) {
   return null;
 }
 
-/** 识别 3 组顺子构成的番种（一色三同顺、组合龙等） */
+/**
+ * 识别 3 组顺子构成的番种（一色三同顺、组合龙等）。
+ * @param {number} t0 - 顺子0的代表牌
+ * @param {number} t1 - 顺子1的代表牌
+ * @param {number} t2 - 顺子2的代表牌
+ * @returns {string|null} 番种名称
+ */
 function get3ChowsFan(t0, t1, t2) {
   const suits = [t0, t1, t2].map(getTileSuit);
   const ranks = [t0, t1, t2].map(getTileRank);
@@ -200,7 +319,12 @@ function get3ChowsFan(t0, t1, t2) {
   return null;
 }
 
-/** 识别 2 组顺子构成的番种（喜相逢、一般高、连六、老少副） */
+/**
+ * 识别 2 组顺子构成的番种（喜相逢、一般高、连六、老少副）。
+ * @param {number} t0 - 顺子0的代表牌
+ * @param {number} t1 - 顺子1的代表牌
+ * @returns {string|null} 番种名称
+ */
 function get2ChowsFanUnordered(t0, t1) {
   if (getTileSuit(t0) !== getTileSuit(t1)) {
     if (getTileRank(t0) === getTileRank(t1)) return 'MIXED_DOUBLE_CHOW';
@@ -213,7 +337,14 @@ function get2ChowsFanUnordered(t0, t1) {
   return null;
 }
 
-/** 识别 4 组刻子构成的番种（一色四节高、大四喜） */
+/**
+ * 识别 4 组刻子构成的番种（一色四节高、大四喜）。
+ * @param {number} t0 - 刻子0的代表牌
+ * @param {number} t1 - 刻子1的代表牌
+ * @param {number} t2 - 刻子2的代表牌
+ * @param {number} t3 - 刻子3的代表牌
+ * @returns {string|null} 番种名称
+ */
 function get4PungsFan(t0, t1, t2, t3) {
   const sortedTiles = [t0, t1, t2, t3].sort((a, b) => a - b);
   if (isNumberedSuit(sortedTiles[0]) && sortedTiles[0] + 1 === sortedTiles[1] && sortedTiles[1] + 1 === sortedTiles[2] && sortedTiles[2] + 1 === sortedTiles[3]) return 'FOUR_PURE_SHIFTED_PUNGS';
@@ -221,7 +352,13 @@ function get4PungsFan(t0, t1, t2, t3) {
   return null;
 }
 
-/** 识别 3 组刻子构成的番种（三同刻、三风刻、大三元等） */
+/**
+ * 识别 3 组刻子构成的番种（三同刻、三风刻、大三元等）。
+ * @param {number} t0 - 刻子0的代表牌
+ * @param {number} t1 - 刻子1的代表牌
+ * @param {number} t2 - 刻子2的代表牌
+ * @returns {string|null} 番种名称
+ */
 function get3PungsFan(t0, t1, t2) {
   const sortedTiles = [t0, t1, t2].sort((a, b) => a - b);
   if (isNumberedSuit(sortedTiles[0]) && isNumberedSuit(sortedTiles[1]) && isNumberedSuit(sortedTiles[2])) {
@@ -242,7 +379,12 @@ function get3PungsFan(t0, t1, t2) {
   return null;
 }
 
-/** 识别 2 组刻子构成的番种（双同刻、双箭刻） */
+/**
+ * 识别 2 组刻子构成的番种（双同刻、双箭刻）。
+ * @param {number} t0 - 刻子0的代表牌
+ * @param {number} t1 - 刻子1的代表牌
+ * @returns {string|null} 番种名称
+ */
 function get2PungsFanUnordered(t0, t1) {
   if (isNumberedSuit(t0) && isNumberedSuit(t1)) {
     if (getTileRank(t0) === getTileRank(t1)) return 'DOUBLE_PUNG';
@@ -252,7 +394,11 @@ function get2PungsFanUnordered(t0, t1) {
   return null;
 }
 
-/** 识别单组刻子番种（箭刻、幺九刻） */
+/**
+ * 识别单组刻子番种（箭刻、幺九刻）。
+ * @param {number} midTile - 刻子的代表牌
+ * @returns {string|null} 番种名称
+ */
 function get1PungFan(midTile) {
   if (isDragon(midTile)) return 'DRAGON_PUNG';
   if (isTerminal(midTile) || isWind(midTile)) return 'PUNG_OF_TERMINALS_OR_HONORS';
@@ -262,6 +408,9 @@ function get1PungFan(midTile) {
 /** 
  * 套算一次原则的处理逻辑。
  * 按照规则，若有多组番，需根据最大组合数削减重复计分。
+ * @param {string[]} allFans - 所有待检查的番种数组
+ * @param {number} maxCount - 最大允许计分的番种数量
+ * @param {Object} fanTable - 结果番表
  */
 function exclusionaryRule(allFans, maxCount, fanTable) {
   const table = { PURE_DOUBLE_CHOW: 0, MIXED_DOUBLE_CHOW: 0, SHORT_STRAIGHT: 0, TWO_TERMINAL_CHOWS: 0 };
@@ -283,7 +432,15 @@ function exclusionaryRule(allFans, maxCount, fanTable) {
   });
 }
 
-/** 计算 4 组顺子中的前 3 组及第 4 组的组合番 */
+/**
+ * 计算 4 组顺子中的前 3 组及第 4 组的组合番。
+ * @param {number} t0 - 顺子0
+ * @param {number} t1 - 顺子1
+ * @param {number} t2 - 顺子2
+ * @param {number} extraTile - 第4组顺子
+ * @param {Object} fanTable - 番表
+ * @returns {boolean} 是否计算成功
+ */
 function calculate3of4Chows(t0, t1, t2, extraTile, fanTable) {
   const fan = get3ChowsFan(t0, t1, t2);
   if (fan) {
@@ -302,7 +459,11 @@ function calculate3of4Chows(t0, t1, t2, extraTile, fanTable) {
   return false;
 }
 
-/** 综合计算 4 组顺子的番种 */
+/**
+ * 综合计算 4 组顺子的番种。
+ * @param {number[]} midTiles - 4组顺子的代表牌数组
+ * @param {Object} fanTable - 番表
+ */
 function calculate4Chows(midTiles, fanTable) {
   const fan = get4ChowsFan(midTiles[0], midTiles[1], midTiles[2], midTiles[3]);
   if (fan) { fanTable[fan] = 1; return; }
@@ -325,7 +486,13 @@ function calculate4Chows(midTiles, fanTable) {
   if (maxCount > 0) exclusionaryRule(allFans, maxCount, fanTable);
 }
 
-/** 计算杠相关的番种（四杠、三杠、明暗杠组合等） */
+/**
+ * 计算杠相关的番种（四杠、三杠、明暗杠组合等）。
+ * @param {number} concealedPungCount - 暗刻数量
+ * @param {number} meldedKongCount - 明杠数量
+ * @param {number} concealedKongCount - 暗杠数量
+ * @param {Object} fanTable - 番表
+ */
 function calculateKongs(concealedPungCount, meldedKongCount, concealedKongCount, fanTable) {
   const total = meldedKongCount + concealedKongCount;
   if (total === 0) {
@@ -372,7 +539,11 @@ function calculateKongs(concealedPungCount, meldedKongCount, concealedKongCount,
   }
 }
 
-/** 识别 4 组刻子的番种及其两两关系 */
+/**
+ * 识别 4 组刻子的番种及其两两关系。
+ * @param {number[]} midTiles - 4组刻子的代表牌数组
+ * @param {Object} fanTable - 番表
+ */
 function calculate4Pungs(midTiles, fanTable) {
   const fan = get4PungsFan(midTiles[0], midTiles[1], midTiles[2], midTiles[3]);
   if (fan) { fanTable[fan] = 1; return; }
@@ -399,7 +570,11 @@ function calculate4Pungs(midTiles, fanTable) {
   }
 }
 
-/** 识别 3 组顺子的番种 */
+/**
+ * 识别 3 组顺子的番种。
+ * @param {number[]} midTiles - 3组顺子的代表牌数组
+ * @param {Object} fanTable - 番表
+ */
 function calculate3Chows(midTiles, fanTable) {
   const fan = get3ChowsFan(midTiles[0], midTiles[1], midTiles[2]);
   if (fan) { fanTable[fan] = 1; return; }
@@ -411,7 +586,11 @@ function calculate3Chows(midTiles, fanTable) {
   exclusionaryRule(allFans, 2, fanTable);
 }
 
-/** 识别 3 组刻子的番种 */
+/**
+ * 识别 3 组刻子的番种。
+ * @param {number[]} midTiles - 3组刻子的代表牌数组
+ * @param {Object} fanTable - 番表
+ */
 function calculate3Pungs(midTiles, fanTable) {
   const fan = get3PungsFan(midTiles[0], midTiles[1], midTiles[2]);
   if (fan) { fanTable[fan] = 1; return; }
@@ -423,19 +602,31 @@ function calculate3Pungs(midTiles, fanTable) {
   }
 }
 
-/** 计算 2 组无序顺子的番种 */
+/**
+ * 计算 2 组无序顺子的番种。
+ * @param {number[]} midTiles - 2组顺子的代表牌数组
+ * @param {Object} fanTable - 番表
+ */
 function calculate2ChowsUnordered(midTiles, fanTable) {
   const fan = get2ChowsFanUnordered(midTiles[0], midTiles[1]);
   if (fan) fanTable[fan] = (fanTable[fan] || 0) + 1;
 }
 
-/** 计算 2 组无序刻子的番种 */
+/**
+ * 计算 2 组无序刻子的番种。
+ * @param {number[]} midTiles - 2组刻子的代表牌数组
+ * @param {Object} fanTable - 番表
+ */
 function calculate2PungsUnordered(midTiles, fanTable) {
   const fan = get2PungsFanUnordered(midTiles[0], midTiles[1]);
   if (fan) fanTable[fan] = (fanTable[fan] || 0) + 1;
 }
 
-/** 根据和牌方式（绝张、自摸、海底等）调整番表 */
+/**
+ * 根据和牌方式（绝张、自摸、海底等）调整番表。
+ * @param {number} winFlag - 和牌标志位
+ * @param {Object} fanTable - 番表
+ */
 function adjustByWinFlag(winFlag, fanTable) {
   if (winFlag & 2) fanTable.LAST_TILE = 1;
   if (winFlag & 1) {
@@ -448,12 +639,21 @@ function adjustByWinFlag(winFlag, fanTable) {
   }
 }
 
-/** 专门针对特殊和型的和牌方式调整 */
+/**
+ * 专门针对特殊和型的和牌方式调整。
+ * @param {number} seatWind - 门风
+ * @param {number} winFlag - 和牌标志位
+ * @param {Object} fanTable - 番表
+ */
 function adjustByWinFlagForSpecialForm(seatWind, winFlag, fanTable) {
   adjustByWinFlag(winFlag, fanTable);
 }
 
-/** 调整花色相关番种（无字、缺一门、清一色、五门齐等） */
+/**
+ * 调整花色相关番种（无字、缺一门、清一色、五门齐等）。
+ * @param {number[]} tiles - 所有牌的十六进制编码数组
+ * @param {Object} fanTable - 番表
+ */
 function adjustBySuits(tiles, fanTable) {
   let suitFlag = 0;
   tiles.forEach(tile => suitFlag |= (1 << getTileSuit(tile)));
@@ -469,7 +669,11 @@ function adjustBySuits(tiles, fanTable) {
   if (suitFlag === 0x1E && tiles.some(isWind) && tiles.some(isDragon)) fanTable.ALL_TYPES = 1;
 }
 
-/** 调整数项范围相关番种（全大、全中、全小、大于五、小于五） */
+/**
+ * 调整数项范围相关番种（全大、全中、全小、大于五、小于五）。
+ * @param {number[]} tiles - 所有牌的十六进制编码数组
+ * @param {Object} fanTable - 番表
+ */
 function adjustByRankRange(tiles, fanTable) {
   if (tiles.some(tile => !isNumberedSuit(tile))) return;
   let rankFlag = 0;
@@ -479,7 +683,11 @@ function adjustByRankRange(tiles, fanTable) {
   else if (!(rankFlag & 0xFF8F)) fanTable.MIDDLE_TILES = 1;
 }
 
-/** 调整手牌特征相关番种（断幺、推不倒、绿一色、字一色、清幺九等） */
+/**
+ * 调整手牌特征相关番种（断幺、推不倒、绿一色、字一色、清幺九等）。
+ * @param {number[]} tiles - 所有牌的十六进制编码数组
+ * @param {Object} fanTable - 番表
+ */
 function adjustByTilesTraits(tiles, fanTable) {
   if (tiles.every(tile => !isTerminalOrHonor(tile))) fanTable.ALL_SIMPLES = 1;
   if (tiles.every(isReversible)) fanTable.REVERSIBLE_TILES = 1;
@@ -490,7 +698,12 @@ function adjustByTilesTraits(tiles, fanTable) {
   if (tiles.every(isTerminalOrHonor)) fanTable.ALL_TERMINALS_AND_HONORS = 1;
 }
 
-/** 调整四归一番种（需扣除杠的张数） */
+/**
+ * 调整四归一番种（需扣除杠的张数）。
+ * @param {number[]} counts - 牌计数数组
+ * @param {number} kongCount - 杠的数量
+ * @param {Object} fanTable - 番表
+ */
 function adjustByTilesHog(counts, kongCount, fanTable) {
   let hog = 0;
   counts.forEach(count => { if (count === 4) hog++; });
@@ -500,6 +713,7 @@ function adjustByTilesHog(counts, kongCount, fanTable) {
 /** 
  * 最终调整逻辑。
  * 处理国标麻将中的“套算一次原则”，删除互斥的低番，保留高番。
+ * @param {Object} fanTable - 番表
  */
 function finalAdjust(fanTable) {
   if (fanTable.BIG_FOUR_WINDS) { delete fanTable.ALL_PUNGS; delete fanTable.PUNG_OF_TERMINALS_OR_HONORS; }
@@ -546,7 +760,11 @@ function finalAdjust(fanTable) {
   if (fanTable.ALL_SIMPLES) delete fanTable.NO_HONORS;
 }
 
-/** 是否满足七对（及更高级的七对变种） */
+/**
+ * 是否满足七对（及更高级的七对变种）。
+ * @param {number[]} counts - 牌计数数组
+ * @returns {boolean}
+ */
 function isSevenPairs(counts) {
   let pairs = 0;
   for (let index = 0; index < 0x59; index++) if (counts[index]) {
@@ -556,7 +774,12 @@ function isSevenPairs(counts) {
   return pairs === 7;
 }
 
-/** 是否满足连七对（七对且为同序数连续） */
+/**
+ * 是否满足连七对（七对且为同序数连续）。
+ * @param {number[]} counts - 牌计数数组
+ * @param {number} suit - 花色
+ * @returns {boolean}
+ */
 function isSevenShiftedPairs(counts, suit) {
   if (suit === 4) return false;
   const startTile = makeTile(suit, 3);
@@ -567,7 +790,11 @@ function isSevenShiftedPairs(counts, suit) {
   return false;
 }
 
-/** 是否满足十三幺 */
+/**
+ * 是否满足十三幺。
+ * @param {number[]} uniqueTiles - 不重复牌的十六进制编码数组
+ * @returns {boolean}
+ */
 function isThirteenOrphans(uniqueTiles) {
   if (uniqueTiles.length !== 13) return false;
   const sorted = [...uniqueTiles].sort();
@@ -575,7 +802,12 @@ function isThirteenOrphans(uniqueTiles) {
   return sorted.every((tile, index) => tile === standardOrphans[index]);
 }
 
-/** 计算全不靠、七星不靠、组合龙相关番种 */
+/**
+ * 计算全不靠、七星不靠、组合龙相关番种。
+ * @param {number[]} uniqueTiles - 不重复牌的十六进制编码数组
+ * @param {Object} fanTable - 番表
+ * @returns {boolean} 是否符合此类牌型
+ */
 function calculateHonorsAndKnittedTiles(uniqueTiles, fanTable) {
   if (uniqueTiles.length !== 14) return false;
   const numberedTiles = uniqueTiles.filter(tile => !isHonor(tile)).sort();
@@ -592,7 +824,17 @@ function calculateHonorsAndKnittedTiles(uniqueTiles, fanTable) {
   return false;
 }
 
-/** 计算特殊和型（七对、全不靠、十三幺） */
+/**
+ * 计算特殊和型（七对、全不靠、十三幺）。
+ * @param {number[]} counts - 牌计数数组
+ * @param {number[]} hexAll - 所有牌的十六进制编码数组
+ * @param {number[]} uniqueTiles - 不重复牌的十六进制编码数组
+ * @param {number} winTile - 和牌张的十六进制编码
+ * @param {number} seatWind - 门风
+ * @param {number} winFlag - 和牌标志位
+ * @param {Object} fanTable - 番表
+ * @returns {boolean} 是否为特殊和型
+ */
 function calculateSpecialFormFan(counts, hexAll, uniqueTiles, winTile, seatWind, winFlag, fanTable) {
   if (isSevenPairs(counts)) {
     const suit = getTileSuit(winTile);
@@ -623,7 +865,12 @@ function calculateSpecialFormFan(counts, hexAll, uniqueTiles, winTile, seatWind,
   return false;
 }
 
-/** 根据和牌状态调整自摸、门清等番种 */
+/**
+ * 根据和牌状态调整自摸、门清等番种。
+ * @param {Object[]} melds - 面子数组
+ * @param {boolean} selfDrawn - 是否为自摸
+ * @param {Object} fanTable - 番表
+ */
 function adjustBySelfDrawn(melds, selfDrawn, fanTable) {
   const meldedCount = melds.filter(meld => meld.melded).length;
   if (meldedCount === 0) fanTable[selfDrawn ? 'FULLY_CONCEALED_HAND' : 'CONCEALED_HAND'] = 1;
@@ -631,7 +878,12 @@ function adjustBySelfDrawn(melds, selfDrawn, fanTable) {
   else if (selfDrawn) fanTable.SELF_DRAWN = 1;
 }
 
-/** 根据雀头调整番种（平和、小三元、小四喜等） */
+/**
+ * 根据雀头调整番种（平和、小三元、小四喜等）。
+ * @param {number} pairTile - 雀头的十六进制编码
+ * @param {number} chowCount - 顺子数量
+ * @param {Object} fanTable - 番表
+ */
 function adjustByPairTile(pairTile, chowCount, fanTable) {
   if (chowCount === 4 && isNumberedSuit(pairTile)) fanTable.ALL_CHOWS = 1;
   if (fanTable.TWO_DRAGONS_PUNGS && isDragon(pairTile)) {
@@ -644,7 +896,12 @@ function adjustByPairTile(pairTile, chowCount, fanTable) {
   }
 }
 
-/** 调整副露/顺子特征相关番种（全带幺、全带五、全双刻） */
+/**
+ * 调整副露/顺子特征相关番种（全带幺、全带五、全双刻）。
+ * @param {Object[]} melds - 面子数组
+ * @param {number} pairTile - 雀头的十六进制编码
+ * @param {Object} fanTable - 番表
+ */
 function adjustByPacksTraits(melds, pairTile, fanTable) {
   let terminal = 0, honor = 0, five = 0, even = 0;
   const all = [...melds, { type: 'PAIR', tile: pairTile }];
@@ -666,12 +923,28 @@ function adjustByPacksTraits(melds, pairTile, fanTable) {
   else if (even === 5) fanTable.ALL_EVEN_PUNGS = 1;
 }
 
-/** 检查是否为独听（边张、嵌张、单钓等）。当前为简化实现，始终返回 true。 */
+/**
+ * 检查是否为独听（边张、嵌张、单钓等）。
+ * 当前为简化实现，始终返回 true。
+ * @param {string[]} standingTiles - 立牌数组
+ * @param {string} winTile - 和牌张字符串
+ * @returns {boolean}
+ */
 function isUniqueWaiting(standingTiles, winTile) {
   return true;
 }
 
-/** 计算普通和型（4组面子 + 1对雀头）的番种 */
+/**
+ * 计算普通和型（4组面子 + 1对雀头）的番种。
+ * @param {Object[]} melds - 面子数组
+ * @param {number} pairTile - 雀头的十六进制编码
+ * @param {number[]} uniqueTiles - 不重复牌的十六进制编码数组
+ * @param {number[]} hexAll - 所有牌的十六进制编码数组
+ * @param {number[]} counts - 牌计数数组
+ * @param {Object} kongInfo - 杠的信息 (melded, concealed)
+ * @param {Object} options - 计算参数
+ * @param {Object} fanTable - 结果番表
+ */
 function calculateRegularFan(melds, pairTile, uniqueTiles, hexAll, counts, kongInfo, options, fanTable) {
   const { winTile, winFlag, seatWind, prevalentWind } = options;
   const chows = melds.filter(meld => meld.type === 'CHOW').map(meld => meld.tile);

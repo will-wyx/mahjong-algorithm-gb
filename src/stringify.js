@@ -20,12 +20,21 @@ const SUITS = ['m', 's', 'p'];
 /** 字牌名称 */
 const HONORS = ['E', 'S', 'W', 'N', 'C', 'F', 'P'];
 
-/** 展开数字简写，如 expandDigits('123', 'm') -> ['1m', '2m', '3m'] */
+/**
+ * 展开数字简写，如 expandDigits('123', 'm') -> ['1m', '2m', '3m']
+ * @param {string} digits - 数字字符串
+ * @param {string} suit - 后缀花色
+ * @returns {string[]} 展开后的牌数组
+ */
 function expandDigits(digits, suit) {
   return [...digits].map((digit) => `${digit}${suit}`);
 }
 
-/** 校验是否为合法的牌字符串 */
+/**
+ * 校验是否为合法的牌字符串。
+ * @param {string} tile - 待校验的牌字符串
+ * @returns {boolean} 是否合法
+ */
 function isTile(tile) {
   return /^[1-9][msp]$/.test(tile) || /^[ESWNCFP]$/.test(tile);
 }
@@ -57,7 +66,11 @@ export function parseTiles(text) {
   return { error: PARSE_NO_ERROR, tiles };
 }
 
-/** 解析单个副露（括号内的内容），如 '123m,1' 表示 123m 顺子，1 号位被供牌 */
+/**
+ * 解析单个副露（括号内的内容），如 '123m,1' 表示 123m 顺子，1 号位被供牌。
+ * @param {string} content - 副露内容字符串
+ * @returns {Object} 包含 error, tiles 数组和 offer 位置的对象
+ */
 function parsePack(content) {
   const match = content.match(/^([^,\]]+)(?:,([1-7]))?$/);
   if (!match) return { error: PARSE_ERROR_CANNOT_MAKE_FIXED_PACK };
@@ -114,7 +127,11 @@ export function parseHandDetailed(text) {
   };
 }
 
-/** 将牌数组转换为简写字符串，如 ['1m', '2m', '3m'] -> '123m' */
+/**
+ * 将牌数组转换为简写字符串，如 ['1m', '2m', '3m'] -> '123m'。
+ * @param {string[]} tiles - 牌数组
+ * @returns {string} 简写字符串
+ */
 export function tilesToString(tiles) {
   const suitBuckets = { m: [], s: [], p: [] };
   const honors = [];
@@ -129,7 +146,11 @@ export function tilesToString(tiles) {
   return parts.join('');
 }
 
-/** 将完整手牌对象转换为字符串表示 */
+/**
+ * 将完整手牌对象转换为字符串表示。
+ * @param {Object} hand - 手牌对象
+ * @returns {string} 字符串表示
+ */
 export function handToString(hand) {
   const packsString = hand.fixedPacks.map((pack) => `[${tilesToString(pack.tiles)}${pack.offer ? ',' + pack.offer : ''}]`).join('');
   return `${packsString}${tilesToString(hand.standingTiles)}`;
