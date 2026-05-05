@@ -61,5 +61,5 @@ export const calculateShanten = (text) => {
 export const calculateFan = (text, options = {}) => {
   const r = stringToTilesDetailed(text);
   if (r.error !== 0) return { ok: false, error: r.error };
-  return calculateFanTable(r.hand.standing_tiles, options);
+  return calculateFanTable(r.hand, options);
 };

@@ -13,20 +13,43 @@ export function countsFromTiles(tiles) {
   return c;
 }
 
-function canMeld(c, start = 0) {
+function getDecompositions(c, start = 0) {
   let i = start;
   while (i < 34 && c[i] === 0) i++;
-  if (i >= 34) return true;
-  if (c[i] >= 3) { c[i] -= 3; if (canMeld(c, i)) return c[i] += 3, true; c[i] += 3; }
-  if (i < 27 && i % 9 <= 6 && c[i+1] && c[i+2]) { c[i]--; c[i+1]--; c[i+2]--; if (canMeld(c, i)) return c[i]++, c[i+1]++, c[i+2]++, true; c[i]++; c[i+1]++; c[i+2]++; }
-  return false;
+  if (i >= 34) return [[]];
+  const results = [];
+  if (c[i] >= 3) {
+    c[i] -= 3;
+    const sub = getDecompositions(c, i);
+    for (const s of sub) results.push([{ type: 'PUNG', tile: indexToTile(i) }, ...s]);
+    c[i] += 3;
+  }
+  if (i < 27 && i % 9 <= 6 && c[i + 1] && c[i + 2]) {
+    c[i]--; c[i + 1]--; c[i + 2]--;
+    const sub = getDecompositions(c, i);
+    for (const s of sub) results.push([{ type: 'CHOW', tile: indexToTile(i + 1) }, ...s]);
+    c[i]++; c[i + 1]++; c[i + 2]++;
+  }
+  return results;
+}
+
+export function findDecompositions(tiles) {
+  const c = countsFromTiles(tiles);
+  const all = [];
+  for (let i = 0; i < 34; i++) {
+    if (c[i] >= 2) {
+      c[i] -= 2;
+      const decs = getDecompositions(c);
+      for (const d of decs) all.push({ pair: indexToTile(i), melds: d });
+      c[i] += 2;
+    }
+  }
+  return all;
 }
 
 export function isRegularWin(tiles) {
   if ((tiles.length - 2) % 3 !== 0) return false;
-  const c = countsFromTiles(tiles);
-  for (let i = 0; i < 34; i++) if (c[i] >= 2) { c[i] -= 2; const ok = canMeld(c); c[i] += 2; if (ok) return true; }
-  return false;
+  return findDecompositions(tiles).length > 0;
 }
 
 export function regularShanten(tiles) {
