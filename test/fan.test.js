@@ -45,13 +45,19 @@ const testCases = [
     name: 'Dragon Pung',
     hand: '123m456s789pCCC55m',
     expectedFan: 2,
+  },
+  {
+    name: 'Flower Tiles',
+    hand: '123m456s789p123p55m',
+    options: { flowerCount: 8 },
+    expectedFan: 10, // 2 (All Chows) + 8 (Flower Tiles)
   }
 ];
 
 function runTests() {
   let passed = 0;
   for (const tc of testCases) {
-    const result = calculateFan(tc.hand);
+    const result = calculateFan(tc.hand, tc.options || {});
     if (result.ok) {
       console.log(`✅ [PASS] ${tc.name}: ${result.totalFan} 番`);
       const fanDetails = Object.entries(result.fanTable)
