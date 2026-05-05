@@ -3,14 +3,14 @@ const ORPHANS = [0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33];
 
 /**
  * 将牌字符串（如 '1m', 'E'）转换为 0-33 的索引。
- * @param {string} t - 牌字符串
+ * @param {string} tile - 牌字符串
  * @returns {number} 索引值
  */
-export function tileIndex(t) {
+export function getTileIndex(tile) {
   const suits = { m: 0, s: 1, p: 2 };
   const honors = { E: 27, S: 28, W: 29, N: 30, C: 31, F: 32, P: 33 };
-  if (t.length === 2) return suits[t[1]] * 9 + Number(t[0]) - 1;
-  return honors[t];
+  if (tile.length === 2) return suits[tile[1]] * 9 + Number(tile[0]) - 1;
+  return honors[tile];
 }
 
 /**
@@ -18,38 +18,38 @@ export function tileIndex(t) {
  * @param {string[]} tiles - 牌数组
  * @returns {number[]} 计数数组
  */
-export function countsFromTiles(tiles) {
-  const c = Array(34).fill(0);
-  for (const t of tiles) c[tileIndex(t)]++;
-  return c;
+export function getTileCounts(tiles) {
+  const counts = Array(34).fill(0);
+  tiles.forEach(tile => counts[getTileIndex(tile)]++);
+  return counts;
 }
 
 /**
  * 递归获取手牌的所有可能面子分解（顺子、刻子）。
- * @param {number[]} c - 计数数组（会被修改，需注意还原）
+ * @param {number[]} counts - 计数数组（会被修改，需注意还原）
  * @param {number} start - 开始扫描的索引
  * @returns {Array[]} 所有可能的分解方案数组
  */
-function getDecompositions(c, start = 0) {
-  let i = start;
-  while (i < 34 && c[i] === 0) i++;
-  if (i >= 34) return [[]];
+function getDecompositions(counts, start = 0) {
+  let index = start;
+  while (index < 34 && counts[index] === 0) index++;
+  if (index >= 34) return [[]];
   const results = [];
 
   // 尝试提取刻子
-  if (c[i] >= 3) {
-    c[i] -= 3;
-    const sub = getDecompositions(c, i);
-    for (const s of sub) results.push([{ type: 'PUNG', tile: indexToTile(i) }, ...s]);
-    c[i] += 3;
+  if (counts[index] >= 3) {
+    counts[index] -= 3;
+    const subDecompositions = getDecompositions(counts, index);
+    subDecompositions.forEach(scheme => results.push([{ type: 'PUNG', tile: tileFromIndex(index) }, ...scheme]));
+    counts[index] += 3;
   }
 
   // 尝试提取顺子（仅限数牌）
-  if (i < 27 && i % 9 <= 6 && c[i + 1] && c[i + 2]) {
-    c[i]--; c[i + 1]--; c[i + 2]--;
-    const sub = getDecompositions(c, i);
-    for (const s of sub) results.push([{ type: 'CHOW', tile: indexToTile(i + 1) }, ...s]);
-    c[i]++; c[i + 1]++; c[i + 2]++;
+  if (index < 27 && index % 9 <= 6 && counts[index + 1] && counts[index + 2]) {
+    counts[index]--; counts[index + 1]--; counts[index + 2]--;
+    const subDecompositions = getDecompositions(counts, index);
+    subDecompositions.forEach(scheme => results.push([{ type: 'CHOW', tile: tileFromIndex(index + 1) }, ...scheme]));
+    counts[index]++; counts[index + 1]++; counts[index + 2]++;
   }
   return results;
 }
@@ -60,17 +60,17 @@ function getDecompositions(c, start = 0) {
  * @returns {Object[]} 分解方案列表，每个对象包含 pair 和 melds
  */
 export function findDecompositions(tiles) {
-  const c = countsFromTiles(tiles);
-  const all = [];
+  const counts = getTileCounts(tiles);
+  const allDecompositions = [];
   for (let i = 0; i < 34; i++) {
-    if (c[i] >= 2) {
-      c[i] -= 2; // 尝试作为雀头
-      const decs = getDecompositions(c);
-      for (const d of decs) all.push({ pair: indexToTile(i), melds: d });
-      c[i] += 2;
+    if (counts[i] >= 2) {
+      counts[i] -= 2; // 尝试作为雀头
+      const decompositions = getDecompositions(counts);
+      decompositions.forEach(decomposition => allDecompositions.push({ pair: tileFromIndex(i), melds: decomposition }));
+      counts[i] += 2;
     }
   }
-  return all;
+  return allDecompositions;
 }
 
 /**
@@ -89,63 +89,87 @@ export function isRegularWin(tiles) {
  * @param {string[]} tiles - 牌数组
  * @returns {number} 向听数（0 为听牌，-1 为和牌）
  */
-export function regularShanten(tiles) {
-  const c = countsFromTiles(tiles); let best = 8;
-  const dfs = (idx, m, p, t) => {
-    while (idx < 34 && c[idx] === 0) idx++;
-    best = Math.min(best, 8 - m * 2 - t - p);
-    if (idx >= 34) return;
+export function getRegularShanten(tiles) {
+  const counts = getTileCounts(tiles);
+  let bestShanten = 8;
+  const dfs = (index, meldCount, pairCount, taatsuCount) => {
+    while (index < 34 && counts[index] === 0) index++;
+    bestShanten = Math.min(bestShanten, 8 - meldCount * 2 - taatsuCount - pairCount);
+    if (index >= 34) return;
 
     // 尝试组成面子（刻子）
-    if (m < 4 && c[idx] >= 3) { c[idx] -= 3; dfs(idx, m + 1, p, t); c[idx] += 3; }
+    if (meldCount < 4 && counts[index] >= 3) {
+      counts[index] -= 3;
+      dfs(index, meldCount + 1, pairCount, taatsuCount);
+      counts[index] += 3;
+    }
     // 尝试组成雀头
-    if (!p && c[idx] >= 2) { c[idx] -= 2; dfs(idx, m, 1, t); c[idx] += 2; }
+    if (!pairCount && counts[index] >= 2) {
+      counts[index] -= 2;
+      dfs(index, meldCount, 1, taatsuCount);
+      counts[index] += 2;
+    }
     // 尝试组成搭子（对子）
-    if (t < 4 - m && c[idx] >= 2) { c[idx] -= 2; dfs(idx, m, p, t + 1); c[idx] += 2; }
+    if (taatsuCount < 4 - meldCount && counts[index] >= 2) {
+      counts[index] -= 2;
+      dfs(index, meldCount, pairCount, taatsuCount + 1);
+      counts[index] += 2;
+    }
     // 尝试组成顺子
-    if (idx < 27 && idx % 9 <= 6 && c[idx + 1] && c[idx + 2]) {
-      c[idx]--; c[idx + 1]--; c[idx + 2]--; dfs(idx, m + 1, p, t);
-      c[idx]++; c[idx + 1]++; c[idx + 2]++;
+    if (index < 27 && index % 9 <= 6 && counts[index + 1] && counts[index + 2]) {
+      counts[index]--; counts[index + 1]--; counts[index + 2]--;
+      dfs(index, meldCount + 1, pairCount, taatsuCount);
+      counts[index]++; counts[index + 1]++; counts[index + 2]++;
     }
     // 尝试组成两面/边张搭子
-    if (idx < 27 && idx % 9 <= 7 && c[idx + 1] && t < 4 - m) {
-      c[idx]--; c[idx + 1]--; dfs(idx, m, p, t + 1);
-      c[idx]++; c[idx + 1]++;
+    if (index < 27 && index % 9 <= 7 && counts[index + 1] && taatsuCount < 4 - meldCount) {
+      counts[index]--; counts[index + 1]--;
+      dfs(index, meldCount, pairCount, taatsuCount + 1);
+      counts[index]++; counts[index + 1]++;
     }
     // 尝试组成嵌张搭子
-    if (idx < 27 && idx % 9 <= 6 && c[idx + 2] && t < 4 - m) {
-      c[idx]--; c[idx + 2]--; dfs(idx, m, p, t + 1);
-      c[idx]++; c[idx + 2]++;
+    if (index < 27 && index % 9 <= 6 && counts[index + 2] && taatsuCount < 4 - meldCount) {
+      counts[index]--; counts[index + 2]--;
+      dfs(index, meldCount, pairCount, taatsuCount + 1);
+      counts[index]++; counts[index + 2]++;
     }
     // 跳过这张牌
-    c[idx]--; dfs(idx, m, p, t); c[idx]++;
+    counts[index]--;
+    dfs(index, meldCount, pairCount, taatsuCount);
+    counts[index]++;
   };
   dfs(0, 0, 0, 0);
-  return best;
+  return bestShanten;
 }
 
 /** 计算七对子向听数 */
-export function sevenPairsShanten(tiles) {
-  const c = countsFromTiles(tiles);
-  let p = 0, u = 0;
-  for (const n of c) { if (n >= 2) p++; if (n > 0) u++; }
-  return 6 - p + Math.max(0, 7 - u);
+export function getSevenPairsShanten(tiles) {
+  const counts = getTileCounts(tiles);
+  let pairCount = 0, uniqueCount = 0;
+  for (const count of counts) {
+    if (count >= 2) pairCount++;
+    if (count > 0) uniqueCount++;
+  }
+  return 6 - pairCount + Math.max(0, 7 - uniqueCount);
 }
 
 /** 计算十三幺向听数 */
-export function thirteenOrphansShanten(tiles) {
-  const c = countsFromTiles(tiles);
-  let u = 0, pair = 0;
-  for (const i of ORPHANS) { if (c[i]) u++; if (c[i] >= 2) pair = 1; }
-  return 13 - u - pair;
+export function getThirteenOrphansShanten(tiles) {
+  const counts = getTileCounts(tiles);
+  let uniqueOrphanCount = 0, hasPair = 0;
+  for (const i of ORPHANS) {
+    if (counts[i]) uniqueOrphanCount++;
+    if (counts[i] >= 2) hasPair = 1;
+  }
+  return 13 - uniqueOrphanCount - hasPair;
 }
 
 /** 内部辅助函数：将索引转换为牌字符串 */
-function indexToTile(i) {
-  if (i < 9) return `${i + 1}m`;
-  if (i < 18) return `${i - 8}s`;
-  if (i < 27) return `${i - 17}p`;
-  return ['E', 'S', 'W', 'N', 'C', 'F', 'P'][i - 27];
+function tileFromIndex(index) {
+  if (index < 9) return `${index + 1}m`;
+  if (index < 18) return `${index - 8}s`;
+  if (index < 27) return `${index - 17}p`;
+  return ['E', 'S', 'W', 'N', 'C', 'F', 'P'][index - 27];
 }
 
 /**
@@ -154,15 +178,14 @@ function indexToTile(i) {
  * @param {Function} shantenFn - 计算向听数的函数
  * @returns {string[]} 有效牌数组
  */
-export function usefulTilesFor(tiles, shantenFn) {
-  const base = shantenFn(tiles);
-  const c = countsFromTiles(tiles);
-  const useful = [];
-  for (let i = 0; i < 34; i++) {
-    if (c[i] >= 4) continue;
-    const t = indexToTile(i);
-    const next = shantenFn([...tiles, t]);
-    if (next < base) useful.push(t);
+export function getUsefulTiles(tiles, shantenFn) {
+  const baseShanten = shantenFn(tiles);
+  const counts = getTileCounts(tiles);
+  const usefulTiles = [];
+  for (let index = 0; index < 34; index++) {
+    if (counts[index] >= 4) continue;
+    const tile = tileFromIndex(index);
+    if (shantenFn([...tiles, tile]) < baseShanten) usefulTiles.push(tile);
   }
-  return useful;
+  return usefulTiles;
 }

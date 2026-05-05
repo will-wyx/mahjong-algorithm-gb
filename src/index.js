@@ -1,6 +1,6 @@
 import {
   parseTiles,
-  stringToTilesDetailed,
+  parseHandDetailed,
   tilesToString,
   handToString,
   PARSE_NO_ERROR,
@@ -13,10 +13,10 @@ import {
   PARSE_ERROR_TILE_COUNT_GREATER_THAN_4
 } from './stringify.js';
 import {
-  regularShanten,
-  sevenPairsShanten,
-  thirteenOrphansShanten,
-  usefulTilesFor,
+  getRegularShanten,
+  getSevenPairsShanten,
+  getThirteenOrphansShanten,
+  getUsefulTiles,
   isRegularWin
 } from './shanten.js';
 import { calculateFanTable, FAN_VALUE } from './fan.js';
@@ -31,13 +31,13 @@ export {
   PARSE_ERROR_TOO_MANY_TILES,
   PARSE_ERROR_TILE_COUNT_GREATER_THAN_4,
   parseTiles,
-  stringToTilesDetailed,
+  parseHandDetailed,
   tilesToString,
   handToString,
-  regularShanten,
-  sevenPairsShanten,
-  thirteenOrphansShanten,
-  usefulTilesFor,
+  getRegularShanten,
+  getSevenPairsShanten,
+  getThirteenOrphansShanten,
+  getUsefulTiles,
   isRegularWin,
   calculateFanTable,
   FAN_VALUE
@@ -49,8 +49,8 @@ export {
  * @returns {Object} 包含 ok 和 hand 对象
  */
 export const parseHand = (text) => {
-  const r = stringToTilesDetailed(text);
-  return r.error === 0 ? { ok: true, ...r } : { ok: false, error: r.error };
+  const result = parseHandDetailed(text);
+  return result.error === 0 ? { ok: true, ...result } : { ok: false, error: result.error };
 };
 
 /**
@@ -59,8 +59,8 @@ export const parseHand = (text) => {
  * @returns {Object} 包含 ok 和规范化后的 hand 字符串
  */
 export const stringifyHand = (text) => {
-  const r = stringToTilesDetailed(text);
-  return r.error === 0 ? { ok: true, hand: handToString(r.hand) } : { ok: false, error: r.error };
+  const result = parseHandDetailed(text);
+  return result.error === 0 ? { ok: true, hand: handToString(result.hand) } : { ok: false, error: result.error };
 };
 
 /**
@@ -69,17 +69,17 @@ export const stringifyHand = (text) => {
  * @returns {Object} 包含向听数及有效牌数组
  */
 export const calculateShanten = (text) => {
-  const r = stringToTilesDetailed(text);
-  if (r.error !== 0) return { ok: false, error: r.error };
-  const t = r.hand.standing_tiles;
+  const result = parseHandDetailed(text);
+  if (result.error !== 0) return { ok: false, error: result.error };
+  const tiles = result.hand.standingTiles;
   return {
     ok: true,
-    regular: regularShanten(t),
-    sevenPairs: sevenPairsShanten(t),
-    thirteenOrphans: thirteenOrphansShanten(t),
-    regularUseful: usefulTilesFor(t, regularShanten),
-    sevenPairsUseful: usefulTilesFor(t, sevenPairsShanten),
-    thirteenOrphansUseful: usefulTilesFor(t, thirteenOrphansShanten)
+    regular: getRegularShanten(tiles),
+    sevenPairs: getSevenPairsShanten(tiles),
+    thirteenOrphans: getThirteenOrphansShanten(tiles),
+    regularUseful: getUsefulTiles(tiles, getRegularShanten),
+    sevenPairsUseful: getUsefulTiles(tiles, getSevenPairsShanten),
+    thirteenOrphansUseful: getUsefulTiles(tiles, getThirteenOrphansShanten)
   };
 };
 
@@ -90,7 +90,7 @@ export const calculateShanten = (text) => {
  * @returns {Object} 算番结果
  */
 export const calculateFan = (text, options = {}) => {
-  const r = stringToTilesDetailed(text);
-  if (r.error !== 0) return { ok: false, error: r.error };
-  return calculateFanTable(r.hand, options);
+  const result = parseHandDetailed(text);
+  if (result.error !== 0) return { ok: false, error: result.error };
+  return calculateFanTable(result.hand, options);
 };
