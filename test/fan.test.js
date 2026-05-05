@@ -1,4 +1,4 @@
-import { calculateFan } from '../src/index.js';
+import { calculateFan, FAN_NAME_ZH, FAN_VALUE } from '../src/index.js';
 
 const testCases = [
   {
@@ -53,8 +53,19 @@ function runTests() {
   for (const tc of testCases) {
     const result = calculateFan(tc.hand);
     if (result.ok) {
-      console.log(`✅ [PASS] ${tc.name}: ${result.totalFan} fans`);
-      console.log(`   Fan Table:`, result.fanTable);
+      console.log(`✅ [PASS] ${tc.name}: ${result.totalFan} 番`);
+      const fanDetails = Object.entries(result.fanTable)
+        .filter(([_, count]) => count > 0)
+        .sort(([keyA, _A], [keyB, _B]) => (FAN_VALUE[keyB] || 0) - (FAN_VALUE[keyA] || 0))
+        .map(([key, count]) => {
+          const name = FAN_NAME_ZH[key] || key;
+          const value = FAN_VALUE[key] || 0;
+          return `   ${name}(${value}${count > 1 ? `x${count}` : ''})`;
+        })
+        .join('\n');
+      if (fanDetails) {
+        console.log(fanDetails);
+      }
       if (result.totalFan >= tc.expectedFan) {
         passed++;
       } else {

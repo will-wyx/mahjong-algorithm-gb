@@ -19,7 +19,7 @@ import {
   getUsefulTiles,
   isRegularWin
 } from './shanten.js';
-import { calculateFanTable, FAN_VALUE } from './fan.js';
+import { calculateFanTable, FAN_VALUE, FAN_NAME_ZH } from './fan.js';
 
 export {
   PARSE_NO_ERROR,
@@ -40,7 +40,8 @@ export {
   getUsefulTiles,
   isRegularWin,
   calculateFanTable,
-  FAN_VALUE
+  FAN_VALUE,
+  FAN_NAME_ZH
 };
 
 /**
