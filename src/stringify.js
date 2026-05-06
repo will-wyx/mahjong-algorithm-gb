@@ -72,12 +72,17 @@ export function parseTiles(text) {
  * @returns {Object} 包含 error, tiles 数组和 offer 位置的对象
  */
 function parsePack(content) {
-  const match = content.match(/^([^,\]]+)(?:,([1-7]))?$/);
+  // 兼容两种供牌位写法：
+  // 1) [123m,1]
+  // 2) [123m1]（与 C++ 测试数据兼容）
+  const match = content.match(/^([^,\]]+?)(?:,([1-7])|([1-7]))?$/);
   if (!match) return { error: PARSE_ERROR_CANNOT_MAKE_FIXED_PACK };
-  const { error, tiles } = parseTiles(match[1]);
+  const tileExpr = match[1];
+  const offer = match[2] || match[3] || null;
+  const { error, tiles } = parseTiles(tileExpr);
   if (error !== 0) return { error };
   if (tiles.length < 3 || tiles.length > 4) return { error: PARSE_ERROR_WRONG_TILES_COUNT_FOR_FIXED_PACK };
-  return { error: 0, tiles, offer: match[2] ? Number(match[2]) : 0 };
+  return { error: 0, tiles, offer: offer ? Number(offer) : 0 };
 }
 
 /**
@@ -109,7 +114,10 @@ export function parseHandDetailed(text) {
 
   // 全局校验
   const allTiles = [...hand.standingTiles, ...hand.fixedPacks.flatMap((x) => x.tiles)];
-  if (allTiles.length > 14) return { error: PARSE_ERROR_TOO_MANY_TILES };
+  // 与 C++ 兼容：杠在字符串里按 4 张表示，但手牌有效张数按 3 张面子计算
+  const effectiveTileCount = hand.standingTiles.length
+    + hand.fixedPacks.reduce((sum, pack) => sum + (pack.tiles.length === 4 ? 3 : pack.tiles.length), 0);
+  if (effectiveTileCount > 14) return { error: PARSE_ERROR_TOO_MANY_TILES };
   
   const counts = new Map();
   for (const tile of allTiles) {
