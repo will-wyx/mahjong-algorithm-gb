@@ -13,6 +13,7 @@ export const FAN_VALUE = {
   FOUR_KONGS: 88,                // 四杠
   SEVEN_SHIFTED_PAIRS: 88,       // 连七对
   THIRTEEN_ORPHANS: 88,          // 十三幺
+  BLESSING_OF_HEAVEN: 60,        // 天和（与C++默认规则兼容）
 
   // 64番
   ALL_TERMINALS: 64,             // 清幺九
@@ -123,6 +124,7 @@ export const FAN_NAME_ZH = {
   FOUR_KONGS: '四杠',
   SEVEN_SHIFTED_PAIRS: '连七对',
   THIRTEEN_ORPHANS: '十三幺',
+  BLESSING_OF_HEAVEN: '天和',
   ALL_TERMINALS: '清幺九',
   LITTLE_FOUR_WINDS: '小四喜',
   LITTLE_THREE_DRAGONS: '小三元',
@@ -373,10 +375,13 @@ function isMixed(s0, s1, s2) { return s0 !== s1 && s0 !== s2 && s1 !== s2; }
  * @returns {string|null} 番种名称
  */
 function get4ChowsFan(t0, t1, t2, t3) {
-  const ranks = [t0, t1, t2, t3].map(getTileRank).sort((a, b) => a - b);
-  if (isFourShifted2(ranks[0], ranks[1], ranks[2], ranks[3])) return 'FOUR_PURE_SHIFTED_CHOWS';
-  if (isFourShifted1(ranks[0], ranks[1], ranks[2], ranks[3])) return 'FOUR_PURE_SHIFTED_CHOWS';
-  if (t0 === t1 && t1 === t2 && t2 === t3) return 'QUADRUPLE_CHOW';
+  const tiles = [t0, t1, t2, t3];
+  const suits = tiles.map(getTileSuit);
+  const pure = suits.every(s => s === suits[0]);
+  const ranks = tiles.map(getTileRank).sort((a, b) => a - b);
+  if (pure && isFourShifted2(ranks[0], ranks[1], ranks[2], ranks[3])) return 'FOUR_PURE_SHIFTED_CHOWS';
+  if (pure && isFourShifted1(ranks[0], ranks[1], ranks[2], ranks[3])) return 'FOUR_PURE_SHIFTED_CHOWS';
+  if (pure && t0 === t1 && t1 === t2 && t2 === t3) return 'QUADRUPLE_CHOW';
   return null;
 }
 
@@ -952,6 +957,50 @@ function calculateSpecialFormFan(counts, hexAll, uniqueTiles, winTile, seatWind,
   return false;
 }
 
+function getKnittedStraightCandidate(standingCounts, fixedPacks) {
+  for (const seq of STANDARD_KNITTED_STRAIGHT) {
+    const rest = standingCounts.slice();
+    let ok = true;
+    for (const t of seq) {
+      if (rest[t] <= 0) { ok = false; break; }
+      rest[t]--;
+    }
+    if (!ok) continue;
+
+    const tiles = [];
+    for (let t = 0; t < rest.length; t++) {
+      for (let i = 0; i < rest[t]; i++) tiles.push(t);
+    }
+    const expectedRemain = fixedPacks.length === 0 ? 5 : 2;
+    if (tiles.length !== expectedRemain) continue;
+
+    for (let i = 0; i < tiles.length - 1; i++) {
+      if (tiles[i] !== tiles[i + 1]) continue;
+      const pairTile = tiles[i];
+      const left = tiles.filter((_, idx) => idx !== i && idx !== i + 1).sort((a, b) => a - b);
+      let extraMeld = null;
+      if (left.length === 3) {
+        if (left[0] === left[1] && left[1] === left[2]) {
+          extraMeld = { type: 'PUNG', tile: left[0], melded: false };
+        } else if (isNumberedSuit(left[0]) && left[0] + 1 === left[1] && left[1] + 1 === left[2] && getTileSuit(left[0]) === getTileSuit(left[2])) {
+          extraMeld = { type: 'CHOW', tile: left[1], melded: false };
+        }
+      }
+
+      const melds = fixedPacks.map(pack => {
+        const type = pack.tiles.length === 4 ? 'KONG' : (pack.tiles[0] === pack.tiles[1] ? 'PUNG' : 'CHOW');
+        return { type, tile: toHexTile(pack.tiles[1]), melded: true };
+      });
+      if (left.length === 3) {
+        if (!extraMeld) continue;
+        melds.push(extraMeld);
+      }
+      return { pairTile, melds };
+    }
+  }
+  return null;
+}
+
 /**
  * 根据和牌状态调整自摸、门清等番种。
  * @param {Object[]} melds - 面子数组
@@ -1036,7 +1085,12 @@ function calculateRegularFan(melds, pairTile, uniqueTiles, hexAll, counts, kongI
   const { winTile, winFlag, seatWind, prevalentWind } = options;
   const chows = melds.filter(meld => meld.type === 'CHOW').map(meld => meld.tile);
   const pungs = melds.filter(meld => meld.type === 'PUNG' || meld.type === 'KONG').map(meld => meld.tile);
-  const concealedPungs = melds.filter(meld => (meld.type === 'PUNG' || meld.type === 'KONG') && !meld.melded).length;
+  let concealedPungs = melds.filter(meld => (meld.type === 'PUNG' || meld.type === 'KONG') && !meld.melded).length;
+  if (!options.selfDrawn) {
+    const hexWin = toHexTile(options.winTile);
+    const winningPung = melds.find(meld => (meld.type === 'PUNG' || meld.type === 'KONG') && !meld.melded && meld.tile === hexWin);
+    if (winningPung) concealedPungs = Math.max(0, concealedPungs - 1);
+  }
 
   // 处理刻子/杠相关的番种
   if (pungs.length > 0) {
@@ -1048,14 +1102,16 @@ function calculateRegularFan(melds, pairTile, uniqueTiles, hexAll, counts, kongI
     }
   }
 
-  // 根据顺子/刻子数量分布计算对应的组合番
-  if (chows.length === 4) calculate4Chows(chows.sort((a, b) => a - b), fanTable);
-  else if (chows.length === 3) calculate3Chows(chows.sort((a, b) => a - b), fanTable);
-  else if (chows.length === 2) {
-    calculate2ChowsUnordered(chows, fanTable);
-    calculate2PungsUnordered(pungs, fanTable);
-  } else if (chows.length === 1) calculate3Pungs(pungs.sort((a, b) => a - b), fanTable);
-  else if (chows.length === 0 && pungs.length === 4) calculate4Pungs(pungs.sort((a, b) => a - b), fanTable);
+  // 根据顺子/刻子数量分布计算对应的组合番（仅适用于完整4面子）
+  if (melds.length === 4) {
+    if (chows.length === 4) calculate4Chows(chows.sort((a, b) => a - b), fanTable);
+    else if (chows.length === 3) calculate3Chows(chows.sort((a, b) => a - b), fanTable);
+    else if (chows.length === 2) {
+      calculate2ChowsUnordered(chows, fanTable);
+      calculate2PungsUnordered(pungs, fanTable);
+    } else if (chows.length === 1) calculate3Pungs(pungs.sort((a, b) => a - b), fanTable);
+    else if (chows.length === 0 && pungs.length === 4) calculate4Pungs(pungs.sort((a, b) => a - b), fanTable);
+  }
 
   // 基础特征调整
   adjustBySelfDrawn(melds, options.selfDrawn, fanTable);
@@ -1066,19 +1122,51 @@ function calculateRegularFan(melds, pairTile, uniqueTiles, hexAll, counts, kongI
   adjustByRankRange(uniqueTiles, fanTable);
   if (!fanTable.QUADRUPLE_CHOW) adjustByTilesHog(counts, kongInfo.melded + kongInfo.concealed, fanTable);
 
+  const winHex = toHexTile(options.winTile);
+  const hasWinTileInMeldedPung = (options.fixedPacks || []).some(pack => {
+    const type = pack.tiles.length === 4 ? 'KONG' : (pack.tiles[0] === pack.tiles[1] ? 'PUNG' : 'CHOW');
+    return (type === 'PUNG' || type === 'KONG') && toHexTile(pack.tiles[1]) === winHex;
+  });
+  if (!options.selfDrawn && hasWinTileInMeldedPung && counts[winHex] === 4) {
+    fanTable.LAST_TILE = 1;
+  }
+
+  if (fanTable.KNITTED_STRAIGHT && melds.length < 4) {
+    if (melds.some(m => m.type === 'CHOW')) {
+      fanTable.ALL_CHOWS = 1;
+      delete fanTable.NO_HONORS;
+      if (pairTile === winHex) fanTable.SINGLE_WAIT = 1;
+    } else if ((options.fixedPacks || []).length === 0 && fanTable.NO_HONORS && pairTile === winHex) {
+      // 组合龙+门清无字时，补偿 C++ 对单钓将的判定
+      fanTable.SINGLE_WAIT = 1;
+    }
+  }
+
   // 听牌形式检测
-  if (isUniqueWaiting(options.standingTiles, options.winTile)) {
+  if (melds.length === 4 && isUniqueWaiting(options.standingTiles, options.winTile)) {
     const concealedMelds = melds.filter(meld => !meld.melded);
     const hexWin = toHexTile(options.winTile);
-    if (pairTile === hexWin) fanTable.SINGLE_WAIT = 1;
+    if (pairTile === hexWin && fanTable.ALL_CHOWS) fanTable.SINGLE_WAIT = 1;
     else {
       for (const meld of concealedMelds) {
         if (meld.type === 'CHOW') {
-          if (meld.tile === hexWin) fanTable.CLOSED_WAIT = 1;
-          else if (meld.tile + 1 === hexWin || meld.tile - 1 === hexWin) fanTable.EDGE_WAIT = 1;
+          if (fanTable.ALL_CHOWS) {
+            if (meld.tile === hexWin) fanTable.CLOSED_WAIT = 1;
+            else if (meld.tile + 1 === hexWin) {
+              if (isNumberedSuit(meld.tile) && getTileRank(meld.tile - 1) === 1) fanTable.EDGE_WAIT = 1;
+            } else if (meld.tile - 1 === hexWin) {
+              if (isNumberedSuit(meld.tile) && getTileRank(meld.tile + 1) === 9) fanTable.EDGE_WAIT = 1;
+            }
+          }
         }
       }
     }
+  }
+
+  if (fanTable.TILE_HOG) {
+    delete fanTable.EDGE_WAIT;
+    delete fanTable.CLOSED_WAIT;
+    delete fanTable.SINGLE_WAIT;
   }
 
   // 风牌刻子（圈风、门风）
@@ -1114,9 +1202,15 @@ export function calculateFanTable(hand, options = {}) {
   const uniqueTiles = Array.from(new Set(hexAll));
   const counts = Array(0x59).fill(0);
   hexAll.forEach(tile => counts[tile]++);
+  const standingCounts = Array(0x59).fill(0);
+  hexStanding.forEach(tile => standingCounts[tile]++);
 
   let winTile = hand.standingTiles[hand.standingTiles.length - 1]; // 假设最后一张为和牌张
   let winFlag = (selfDrawn ? 1 : 0);
+  if (options.lastTile) winFlag |= 2;
+  if (options.kongInvolved) winFlag |= 4;
+  if (options.wallLast) winFlag |= 8;
+  if (options.initial) winFlag |= 16;
 
   let bestFanTable = {};
   let maxFan = -1;
@@ -1144,10 +1238,21 @@ export function calculateFanTable(hand, options = {}) {
       if (type === 'KONG') kongInfo.melded++;
     });
 
-    calculateRegularFan(melds, toHexTile(decomposition.pair), uniqueTiles, hexAll, counts, kongInfo, { ...options, winTile, winFlag, standingTiles: hand.standingTiles }, currentTable);
+    calculateRegularFan(melds, toHexTile(decomposition.pair), uniqueTiles, hexAll, counts, kongInfo, { ...options, winTile, winFlag, standingTiles: hand.standingTiles, fixedPacks: hand.fixedPacks }, currentTable);
     const currentFan = Object.entries(currentTable).reduce((sum, [key, value]) => sum + (FAN_VALUE[key] || 0) * value, 0);
     if (currentFan > maxFan) {
       maxFan = currentFan;
+      bestFanTable = currentTable;
+    }
+  }
+
+  if (maxFan === -1) {
+    const knitted = getKnittedStraightCandidate(standingCounts, hand.fixedPacks);
+    if (knitted) {
+      const currentTable = { KNITTED_STRAIGHT: 1 };
+      const kongInfo = { melded: knitted.melds.filter(m => m.type === 'KONG' && m.melded).length, concealed: 0 };
+      calculateRegularFan(knitted.melds, knitted.pairTile, uniqueTiles, hexAll, counts, kongInfo, { ...options, winTile, winFlag, standingTiles: hand.standingTiles, fixedPacks: hand.fixedPacks }, currentTable);
+      maxFan = Object.entries(currentTable).reduce((sum, [key, value]) => sum + (FAN_VALUE[key] || 0) * value, 0);
       bestFanTable = currentTable;
     }
   }
@@ -1157,6 +1262,9 @@ export function calculateFanTable(hand, options = {}) {
 
   // 3. 最后加上花牌番数
   bestFanTable.FLOWER_TILES = flowerCount;
+  if (options.initial && selfDrawn && seatWind === 0 && prevalentWind === 0 && bestFanTable.FULL_FLUSH) {
+    bestFanTable.BLESSING_OF_HEAVEN = 1;
+  }
   const totalFan = Object.entries(bestFanTable).reduce((sum, [key, value]) => sum + (FAN_VALUE[key] || 0) * value, 0);
   return { ok: true, totalFan, fanTable: bestFanTable };
 }
